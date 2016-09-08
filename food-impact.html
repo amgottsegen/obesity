@@ -42,8 +42,13 @@
                 opacity: 0.7;
             }
         </style>
+        <link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet" type="text/css" href="https://explorables.cmucreatelab.org/data-visualization-tools/css/defaultUI.css" />
+        <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
         <script src="https://npmcdn.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
         <script type="text/javascript" src="http://maps.stamen.com/js/tile.stamen.js?v1.3.0"></script>
+        <script type="text/javascript" src="http://explorables.cmucreatelab.org/data-visualization-tools/js/TimeSlider.js"></script>
         <script>
             var map;
             var countriesLayer;
@@ -52,6 +57,8 @@
             var info;
 
             var ready = {'map': false, 'geojson': false};
+
+            var TimeSlider;
 
             function isReady() {
                 if (ready['map'] && ready['geojson'] ) {
@@ -72,6 +79,28 @@
                 xhr.send();
             }
 
+            function initTimeSlider() {
+                var timeSlider = new TimeSlider({
+                    startTime: new Date(2001,0,1,0,0,0).getTime(),
+                    endTime: new Date(2016,0,1,19,59,0).getTime(),
+                    dwellAnimationTime: 3 * 1000,
+                    increment: 30*24*60*60*1000,
+                    formatCurrentTime: function(date) {
+                        var date = new Date(date);
+                        var year = date.getFullYear();
+                        var month = date.getMonth();
+                        var day = date.getDay();
+                        var res = year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day);
+                        return res;
+                    },
+                    animationRate: {
+                        fast: 20,
+                        medium: 40,
+                        slow: 80
+                    }
+                });                
+                return TimeSlider;
+            }
 
             function initInfo(map) {
                 // control that shows state info on hover
@@ -176,6 +205,7 @@
             function init() {
               map = initMap();
               get('future_of_food.geojson', loadGeoJSON);
+              timeSlider = initTimeSlider();
             }   
 
             document.addEventListener('DOMContentLoaded', init, false);
@@ -183,5 +213,6 @@
     </head>
     <body>
         <div id="map"></div>
+        <div id="time-slider-controls"></div>
     </body>
 </html>
