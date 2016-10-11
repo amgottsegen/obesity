@@ -236,7 +236,7 @@ svg text{
                 if (isReady()) {
                   leafletMap.addLayer(countriesLayer);
                   initInfo(leafletMap);
-
+                  initLegend(leafletMap);
                 }
                 return leafletMap;
             }
@@ -391,6 +391,7 @@ svg text{
                 if (isReady()) {
                     map.addLayer(countriesLayer);
                     initInfo(map);
+                    initLegend(map);
                 }
 
             }
