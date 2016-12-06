@@ -145,6 +145,7 @@ svg text{
             var info;
             var idx = 0;
             var currentScenario = 'SSP2_CC'; // 0, climate change. 1, no climate change
+            var currentMetric = 'abs'; // Absolute Value
 
             var ready = {'map': false, 'geojson': false};
 
@@ -182,7 +183,7 @@ svg text{
                     var value = 0;
                     if (props && typeof(props.scenarios) != "undefined") {
 //                        value = props.scenarios[currentScenario].years[0].value.toFixed(4);
-                        value = getValue(props,0).toFixed(4);
+                        value = getValue(props,0, currentMetric).toFixed(4);
 
                     }
                     console.log(props)
@@ -223,19 +224,19 @@ svg text{
                                '#8b0000';
             }
 
-            function getValue(feature,year) {
+            function getValue(feature,year,metric) {
                 var value = 0;
                 ssp2_cc = 0;
                 ssp2_nocc = 1;
                 if (typeof(feature.properties.scenarios) != "undefined") {
                     if (currentScenario == "SSP2_CC") {
-                        value = feature.properties.scenarios[ssp2_cc].years[year].value;
+                        value = feature.properties.scenarios[ssp2_cc].years[year][metric];
                     } 
                     if (currentScenario == "SSP2_NoCC") {
-                        value = feature.properties.scenarios[ssp2_nocc].years[year].value;
+                        value = feature.properties.scenarios[ssp2_nocc].years[year][metric];
                     } 
                     if (currentScenario == "SSP2_Diff") {
-                        value = feature.properties.scenarios[ssp2_cc].years[year].value - feature.properties.scenarios[ssp2_nocc].years[year].value;
+                        value = feature.properties.scenarios[ssp2_cc].years[year][metric] - feature.properties.scenarios[ssp2_nocc].years[year][metric];
 
                     } 
                 }
@@ -243,7 +244,7 @@ svg text{
             }
 
             function style(feature) {
-                var value = getValue(feature,idx);
+                var value = getValue(feature,idx, currentMetric);
                 return {
                     weight: 2,
                     opacity: 1,
@@ -257,7 +258,7 @@ svg text{
             function pointToLayer(feature, latlng) {
                 var value = 0;
                 if (typeof feature.properties != "undefined" && typeof feature.properties.scenarios != "undefined") {
-                    value = getValue(feature,0);
+                    value = getValue(feature,0, currentMetric);
                 }
                 return L.circleMarker(latlng, {
                     radius: getRadius(value),
@@ -320,8 +321,27 @@ svg text{
 
             function init() {
                 map = initMap();
-                get('fof.geojson', loadGeoJSON);
+                get('fof-chg_cap.geojson', loadGeoJSON);
                 initTimelapse();
+
+                var metric = document.layerControls.metric;
+                metric.value = currentMetric;
+
+                var nocc = document.getElementById("NoCC");
+                var diff = document.getElementById("Diff");
+                metric.onchange = function () {
+                    currentMetric = metric.value;
+                    update();
+                    if (currentMetric == "chg_cap") {
+                        document.layerControls.radio[0].checked = true;
+                        nocc.style.display = "none";
+                        diff.style.display = "none";
+
+                    } else {
+                        nocc.style.display = "";
+                        diff.style.display = "";
+                    }
+                }
 
                 var layerControls = document.layerControls.radio;
                 for (var i = 0; i < layerControls.length; i++) {
@@ -411,12 +431,12 @@ svg text{
                         if (index < f_timelapse.getNumFrames() - 1) {
 //                            var val1 = feature.properties.scenarios[currentScenario].years[index].value
 //                            var val2 = feature.properties.scenarios[currentScenario].years[index+1].value
-                            var val1 = getValue(feature, index);
-                            var val2 = getValue(feature, index+1);
+                            var val1 = getValue(feature, index, currentMetric);
+                            var val2 = getValue(feature, index+1, currentMetric);
                             value = val1 + (val2 - val1)*interpolate;
                         } else {
 //                            value = feature.properties.scenarios[currentScenario].years[index].value;
-                            value = getValue(feature, index);
+                            value = getValue(feature, index, currentMetric);
                         }
                     } 
                     layer.setStyle({
@@ -472,14 +492,23 @@ svg text{
         <div id="layerControls" class="info">
             <form name="layerControls">
                 <div>
+                    <select name="metric">
+                        <option value="chg_cap">chg_cap</option>
+                        <option value="abs">abs</option>
+                    </select>
+                    <label for="metric"><span><span></span></span>Metric</label>
+                    <hr/>
+                </div>
+
+                <div>
                     <input id="radio1" type="radio" name="radio" value="SSP2_CC" checked="checked">
                     <label for="radio1"><span><span></span></span>SSP2_CC</label>
                 </div>
-                <div>
+                <div id="NoCC">
                     <input id="radio2" type="radio" name="radio" value="SSP2_NoCC">
                     <label for="radio2"><span><span></span></span>SSP2_NoCC</label>
                 </div>
-                <div>
+                <div id="Diff">
                     <input id="radio3" type="radio" name="radio" value="SSP2_Diff">
                     <label for="radio3"><span><span></span></span>SSP2 Diff</label>
                 </div>
