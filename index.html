@@ -2,7 +2,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Food Imapct</title>
+    <title>Obesity</title>
     <style type="text/css">
       html, body, #map-div {
       margin: 0;
@@ -15,19 +15,10 @@
         left: 5px;
         color: #fff;
       }
-      div.control {
-        position: absolute;
-        top: 30px;
-        right: 20px;
-        background-color: white;
-        padding: 7px;
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 15px;
-      }
     </style>
     <link href="css/defaultUI.css" media="screen" rel="stylesheet" type="text/css"></link>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
     <script src="http://maps.googleapis.com/maps/api/js"></script>
     <script type="text/javascript" src="js/CanvasLayer.js"></script>
@@ -35,16 +26,10 @@
     <script type="text/javascript" src="js/TimeSlider.js"></script>
 
     <script id="point-vertex-shader" type="x-shader/x-vertex">
-      attribute vec4 a_Centroid; 
-      attribute float a_Year; 
+      attribute vec4 a_Centroid;
+      attribute float a_Year;
       attribute float a_Val1;
       attribute float a_Val2;
-      attribute float a_Rcp;
-
-      uniform bool u_ShowRpc2p6;
-      uniform bool u_ShowRpc4p5;
-      uniform bool u_ShowRpc6p0;
-      uniform bool u_ShowRpc8p5;                  
 
       uniform float u_Delta;
       uniform float u_Size;
@@ -52,82 +37,39 @@
       uniform mat4 u_MapMatrix;
 
       varying float v_Val;
-      varying float v_Rcp;
 
       void main() {
         vec4 position;
         if (a_Year != u_Year) {
           position = vec4(-1,-1,-1,-1);
         } else {
-          if (u_ShowRpc2p6 && a_Rcp == 0.0) {
             position = u_MapMatrix * vec4(a_Centroid.x, a_Centroid.y, 0, 1);
-          } else if (u_ShowRpc4p5 && a_Rcp == 1.0) {
-            position = u_MapMatrix * vec4(a_Centroid.x, a_Centroid.y, 0, 1);
-          } else if (u_ShowRpc6p0 && a_Rcp == 2.0) {
-            position = u_MapMatrix * vec4(a_Centroid.x, a_Centroid.y, 0, 1);
-          }  else if (u_ShowRpc8p5 && a_Rcp == 3.0) {
-            position = u_MapMatrix * vec4(a_Centroid.x, a_Centroid.y, 0, 1);
-          }
-          else {
-            position = vec4(-1,-1,-1,-1);
-
-          }
         }
 
         gl_Position = position;
 
         float size = (a_Val2 - a_Val1) * u_Delta + a_Val1;
         v_Val = size;
-        v_Rcp = a_Rcp;
-        gl_PointSize = u_Size * abs(size);
-        gl_PointSize = 2.0 * abs(size);
+        //gl_PointSize = u_Size * abs(size);
+        //gl_PointSize = 75.0 * abs(size);
+        gl_PointSize = 75.0 * abs(size);
+        //gl_PointSize = 10.0 * exp2(size);
 
       }
     </script>
     <script id="point-fragment-shader" type="x-shader/x-fragment">
-      #extension GL_OES_standard_derivatives : enable
-
       precision mediump float;
+      uniform sampler2D u_Image;
 
       varying float v_Val;
-      varying float v_Rcp;
 
       void main() {
           float dist = length(gl_PointCoord.xy - vec2(.5, .5));
           dist = 1. - (dist * 2.);
           dist = max(0., dist);
-          float delta = fwidth(dist);
-          float alpha = smoothstep(0.45-delta, 0.45, dist);
-          vec4 circleColor = vec4(1.0,0.0,0.0,1.0);
-          vec4 outlineColor = vec4(1.0,1.0,1.0,1.0);
-          float outerEdgeCenter = 0.5 - .01;
-          float stroke = smoothstep(outerEdgeCenter - delta, outerEdgeCenter + delta, dist);
-
-          if (v_Val > 0.0) {
-            if (v_Rcp == 0.0) {
-              circleColor = vec4(0.0, 0.0, 1.0, .65) * alpha;
-            } else if (v_Rcp == 1.0){
-              circleColor = vec4(0.0078, 0.0, 0.8392, .65) * alpha;
-            } else if (v_Rcp == 2.0) {
-              circleColor = vec4(0.0078, 0.0, 0.6941, .65) * alpha;
-            } else {
-              circleColor = vec4(0., 0., .5451, .65) * alpha;
-            }
- 
-          } else {
-            if (v_Rcp == 0.0) {
-              circleColor = vec4(1.0, 0.0, 0.0, .65) * alpha;
-            } else if (v_Rcp == 1.0){
-              circleColor = vec4(0.8392, 0.0, 0.0078, .65) * alpha;
-            } else if (v_Rcp == 2.0) {
-              circleColor = vec4(0.6941, 0.0, 0.0078, .65) * alpha;
-            } else {
-              circleColor = vec4(.5451, 0., 0., .65) * alpha;
-            }
-
-          }
-          gl_FragColor = vec4( mix(outlineColor.rgb, circleColor.rgb, stroke), alpha*.75 );
-
+          float alpha = smoothstep(0.3-dist, 0.3, dist);
+          vec4 color = texture2D(u_Image, vec2(v_Val,v_Val));
+          gl_FragColor = vec4(color.r, color.g, color.b, 0.75) * alpha;
       }
 
     </script>
@@ -142,11 +84,17 @@
       var blockPointSizePixels = 20;
       var texture;
       var image = new Image();
-      var years = [2015, 2020, 2025, 2030, 2035, 2040, 2045, 2050];
-      var showRcp = [true, false, false, false];
+      image.src = "color-map.png";
+      image.onload = function() {
+        console.log("loaded");
+      }
+      var years = [];
+      for(var i=1990;i<2014;i++){
+        years.push(i);
+      }
 
       var fragility = {
-        url: "fof-centroids-rcp-chg_cap.bin",
+        url: "obesity-centroids.bin",
         ready: false,
         pointCount: 0,
         data: null,
@@ -161,6 +109,7 @@
         xhr.open('GET', url);
         xhr.responseType = 'arraybuffer';
         xhr.onload = function() {
+          //var float32Array = new Float32Array(this.response.slice(2));
           var float32Array = new Float32Array(this.response);
           setData(float32Array);
           var el = document.getElementById("loading");
@@ -172,7 +121,7 @@
       }
 
       function setData(buffer) {
-        fragility.pointCount = buffer.length / 6;
+        fragility.pointCount = buffer.length / 5;
         fragility.data = buffer;
         fragility.arrayBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, fragility.arrayBuffer);
@@ -180,23 +129,31 @@
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
         gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 24, 0);
+        gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 20, 0);
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Year');
         gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 8);
+        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 8);
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Val1');
         gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 12);
+        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 12);
 
         var attributeLoc = gl.getAttribLocation(program, 'a_Val2');
         gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 16);
+        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 16);
 
-        var attributeLoc = gl.getAttribLocation(program, 'a_Rcp');
-        gl.enableVertexAttribArray(attributeLoc);
-        gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 20);
+        texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // Set the parameters so we can render any size image.
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+        // Upload the image into the texture.
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
         fragility.ready = true;
         timeSlider.play();
@@ -222,14 +179,14 @@
             }
           }
           var currentYear = new Date(year, 0, 1);
-          var nextYear = new Date(year + 5, 0, 1);
-          if (year == 2050) {
+          var nextYear = new Date(year + 1, 0, 1);
+          if (year == 2013) {
             nextYear = currentYear;
           }
           var currentTime = timeSlider.getCurrentTime();
 
           var delta = (currentTime - currentYear)/(nextYear - currentYear);
-          //console.log(delta);          
+          //console.log(delta);
 
           var deltaLoc = gl.getUniformLocation(program, 'u_Delta');
           gl.uniform1f(deltaLoc, delta);
@@ -237,39 +194,27 @@
           var epochLoc = gl.getUniformLocation(program, 'u_Year');
           gl.uniform1f(epochLoc, year);
 
-          var rpcLoc = gl.getUniformLocation(program, 'u_ShowRpc2p6');
-          gl.uniform1f(rpcLoc, showRcp[0]);
-
-          var rpcLoc = gl.getUniformLocation(program, 'u_ShowRpc4p5');
-          gl.uniform1f(rpcLoc, showRcp[1]);
-
-          var rpcLoc = gl.getUniformLocation(program, 'u_ShowRpc6p0');
-          gl.uniform1f(rpcLoc, showRcp[2]);
-
-          var rpcLoc = gl.getUniformLocation(program, 'u_ShowRpc8p5');
-          gl.uniform1f(rpcLoc, showRcp[3]);
-
           gl.bindBuffer(gl.ARRAY_BUFFER, fragility.arrayBuffer);
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Centroid');
           gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 24, 0);
+          gl.vertexAttribPointer(attributeLoc, 2, gl.FLOAT, false, 20, 0);
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Year');
           gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 8);
+          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 8);
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Val1');
           gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 12);
+          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 12);
 
           var attributeLoc = gl.getAttribLocation(program, 'a_Val2');
           gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 16);
+          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 20, 16);
 
-          var attributeLoc = gl.getAttribLocation(program, 'a_Rcp');
-          gl.enableVertexAttribArray(attributeLoc);
-          gl.vertexAttribPointer(attributeLoc, 1, gl.FLOAT, false, 24, 20);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.uniform1i(gl.getUniformLocation(program, "u_Image"), 0);
 
           gl.drawArrays(gl.POINTS, 0, fragility.pointCount);
         }
@@ -306,7 +251,7 @@
           draw(mapMatrix);
           timeSlider.animate();
 
-        }       
+        }
       }
 
       function resize() {
@@ -331,7 +276,7 @@
         };
         return new CanvasLayer(canvasLayerOptions);
       }
- 
+
       function initMap() {
         var mapOptions = {
           zoom: 2,
@@ -529,47 +474,34 @@
 
         var mapDiv = document.getElementById('map-div');
         return new google.maps.Map(mapDiv, mapOptions);
-      }      
+      }
 
       function init() {
         map = initMap();
         canvasLayer = initCanvasLayer(map, update, resize);
         gl = canvasLayer.canvas.getContext('experimental-webgl');
-gl.getExtension("OES_standard_derivatives")        
+        gl.getExtension("OES_standard_derivatives")
         gl.enable(gl.BLEND);
         gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
         glb = new Glb(gl);
         program = glb.programFromSources(document.getElementById('point-vertex-shader').text,
-                                         document.getElementById('point-fragment-shader').text);        
+                                         document.getElementById('point-fragment-shader').text);
         load(fragility.url);
 
         timeSlider = new TimeSlider({
-          startTime: new Date('2015-01-01').getTime(),
-          endTime: new Date('2050-12-31').getTime(),
+          startTime: new Date('1990-01-01').getTime(),
+          endTime: new Date('2013-12-31').getTime(),
           increment: 5*60*60*24*1000, // One day
           span: 120*24*60*60*1000, // Two month
           formatCurrentTime: function(date) {
             return date.getFullYear();
           },
           animationRate: {
-            fast: 5,
-            medium: 10,
-            slow: 20
+            fast: 2,
+            medium: 5,
+            slow: 10
           }
         });
-
-        var inputs = document.getElementsByTagName("input");          
-        for (var i = 0; i < inputs.length; i++) {
-          var input = inputs[i];
-          input.addEventListener("click", function() {
-            if (this.checked) {
-              showRcp[this.value] = true;
-            } else {
-              showRcp[this.value] = false;
-
-            }
-          }) 
-        }
 
       }
 
@@ -582,12 +514,21 @@ gl.getExtension("OES_standard_derivatives")
     <div id="map-div"></div>
     <div id="time-slider-controls"></div>
     <div id="timeMachine" style="display:none"></div>
-  <div class="control">
-  <label><input type="checkbox" id="rcp2p6" value="0" checked>RCP 2.6</label><br>
-  <label><input type="checkbox" id="rcp4p5" value="1">RCP 4.5</label><br>
-  <label><input type="checkbox" id="rcp6p0" value="2">RCP 6</label><br>
-  <label><input type="checkbox" id="rcp8.5" value="3">RCP 8.5</label><br>
-
-  </div>
+    <div id="color-bkg-div" style="display: block;">
+      <div id="ui-c-axis-text-simple" class="desc-subj-txt" style="text-align: center; padding: 2px 0px 3px;">Obesity</div>
+      <div id="ui-palette-legend-simple" class="desc-subj-txt" style="">
+        <svg width="185" height="29">
+          <rect fill="#ffffff" x="0" height="9" width="21.555555555555557"></rect>
+          <text font-size="10.5px" fill="rgba(255, 255, 255, 0.8)" y="29" x="0">1.1%</text>
+          <rect fill="#ffd8e7" x="20.555555555555557" height="9" width="21.555555555555557"></rect>
+          <rect fill="#feb1d1" x="41.111111111111114" height="9" width="21.555555555555557"></rect>
+          <rect fill="#f18bbd" x="61.66666666666667" height="9" width="21.555555555555557"></rect>
+          <rect fill="#dd68ac" x="82.22222222222223" height="9" width="21.555555555555557"></rect>
+          <rect fill="#c4479e" x="102.77777777777779" height="9" width="21.555555555555557"></rect>
+          <rect fill="#a52792" x="123.33333333333334" height="9" width="21.555555555555557"></rect>
+          <rect fill="#7d0989" x="143.8888888888889" height="9" width="21.555555555555557"></rect>
+          <rect fill="#4b0082" x="164.44444444444446" height="9" width="21.555555555555557"></rect>
+          <text font-size="10.5px" fill="rgba(255, 255, 255, 0.8)" y="29" x="156">60.1%</text>
+        </svg></div>
   </body>
 </html>
